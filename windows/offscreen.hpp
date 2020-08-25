@@ -3,7 +3,7 @@
  * @Author: ekibun
  * @Date: 2020-08-23 17:38:03
  * @LastEditors: ekibun
- * @LastEditTime: 2020-08-24 15:06:44
+ * @LastEditTime: 2020-08-25 22:44:14
  */
 #include <windows.h>
 #include <functional>
@@ -45,7 +45,6 @@ namespace webview
       : public ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler,
         public ICoreWebView2CreateCoreWebView2ControllerCompletedHandler,
         public ICoreWebView2NavigationCompletedEventHandler,
-        public ICoreWebView2WebMessageReceivedEventHandler,
         public ICoreWebView2WebResourceRequestedEventHandler
   {
     ICoreWebView2Controller *webviewController = nullptr;
@@ -104,7 +103,6 @@ namespace webview
       webviewWindow->AddWebResourceRequestedFilter(L"*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
       webviewWindow->add_WebResourceRequested(this, &token);
       webviewWindow->add_NavigationCompleted(this, &token);
-      webviewWindow->add_WebMessageReceived(this, &token);
       result->Success((int64_t)this);
       delete result;
       result = nullptr;
@@ -125,17 +123,6 @@ namespace webview
       } else {
         invokeChannelMethod("onNavigationCompleted", flutter::EncodableValue());
       }
-      return S_OK;
-    }
-    HRESULT STDMETHODCALLTYPE Invoke(
-        ICoreWebView2 *sender, ICoreWebView2WebMessageReceivedEventArgs *args)
-    {
-      LPWSTR message;
-      args->TryGetWebMessageAsString(&message);
-      invokeChannelMethod("onMessage", from_lpwstr(message));
-      sender->PostWebMessageAsString(message);
-
-      CoTaskMemFree(message);
       return S_OK;
     }
 
@@ -233,120 +220,11 @@ namespace webview
     ~Offscreen()
     {
       std::cout << "close" << std::endl;
-      if (webviewController)
+      if (webviewController){
         webviewController->Close();
+        webviewController = nullptr;
+      }
+        
     }
-
-    // ICoreWebView2Controller *webviewController = nullptr;
-    // ICoreWebView2 *webviewWindow = nullptr;
-    // flutter::MethodChannel<flutter::EncodableValue> *_channel;
-
-    // LPWSTR to_lpwstr(const std::string s)
-    // {
-    //   int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, NULL, 0);
-    //   wchar_t *ws = new wchar_t[n];
-    //   MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, ws, n);
-    //   return ws;
-    // }
-
-    // void invokeChannelMethod(std::string name, flutter::EncodableValue args, int64_t webview)
-    // {
-    //   auto map = new flutter::EncodableMap();
-    //   (*map)[std::string("webview")] = webview;
-    //   (*map)[std::string("args")] = args;
-
-    //   _channel->InvokeMethod(
-    //       name,
-    //       std::make_unique<flutter::EncodableValue>(map),
-    //       nullptr);
-    // }
-
-    // Offscreen(HWND hwnd, flutter::MethodChannel<flutter::EncodableValue> *channel, flutter::MethodResult<flutter::EncodableValue> *result)
-    // {
-    //   this->_channel = channel;
-
-    //   std::cout << "create" << std::endl;
-
-    //   HRESULT res = CreateCoreWebView2Environment(
-    //       new webview2_com_handler(hwnd, this));
-    //   // Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
-    //   //     [this](HRESULT result, ICoreWebView2Environment *env) -> HRESULT {
-    //   //       std::cout << "env:" << env << std::endl;
-
-    //   //       env->CreateCoreWebView2Controller(
-    //   //           _hwnd,
-    //   //           Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
-    //   //               [this](HRESULT result, ICoreWebView2Controller *controller) -> HRESULT {
-    //   //                 std::cout << "controller:" << controller << std::endl;
-
-    //   //                 webviewController = controller;
-    //   //                 webviewController->get_CoreWebView2(&webviewWindow);
-    //   //                 webviewWindow->AddRef();
-
-    //   // ICoreWebView2Settings *Settings;
-    //   // webviewWindow->get_Settings(&Settings);
-    //   // Settings->put_IsScriptEnabled(TRUE);
-    //   // Settings->put_AreDefaultScriptDialogsEnabled(TRUE);
-    //   // Settings->put_IsWebMessageEnabled(TRUE);
-
-    //   // RECT bounds;
-    //   // GetClientRect(hwnd, &bounds);
-    //   // webviewController->put_Bounds(bounds);
-
-    //   // EventRegistrationToken token;
-    //   // webviewWindow->AddWebResourceRequestedFilter(L"*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
-    //   // webviewWindow->add_WebResourceRequested(
-    //   //     Microsoft::WRL::Callback<ICoreWebView2WebResourceRequestedEventHandler>(
-    //   //         [this](ICoreWebView2 *sender, ICoreWebView2WebResourceRequestedEventArgs *args) -> HRESULT {
-    //   //           ICoreWebView2WebResourceRequest *request;
-    //   //           args->get_Request(&request);
-
-    //   //           std::map<flutter::EncodableValue, flutter::EncodableValue> frequest;
-    //   //           LPWSTR str;
-    //   //           request->get_Uri(&str);
-    //   //           frequest[std::string("url")] = wchar_tToString(str);
-    //   //           std::cout << "url:" << str << std::endl;
-
-    //   //           request->get_Method(&str);
-    //   //           frequest[std::string("method")] = wchar_tToString(str);
-    //   //           // TODO request->get_Content(&stream);
-    //   //           ICoreWebView2HttpRequestHeaders *headers;
-    //   //           request->get_Headers(&headers);
-    //   //           ICoreWebView2HttpHeadersCollectionIterator *iterator;
-    //   //           headers->GetIterator(&iterator);
-    //   //           BOOL hasCurrent = FALSE;
-    //   //           flutter::EncodableList fheaders;
-
-    //   //           while (SUCCEEDED(iterator->get_HasCurrentHeader(&hasCurrent)) && hasCurrent)
-    //   //           {
-    //   //             LPWSTR name, value;
-    //   //             iterator->GetCurrentHeader(&name, &value);
-    //   //             std::map<flutter::EncodableValue, flutter::EncodableValue> kv;
-    //   //             kv[wchar_tToString(name)] = wchar_tToString(value);
-    //   //             fheaders.emplace_back(kv);
-    //   //           }
-    //   //           frequest[std::string("headers")] = fheaders;
-
-    //   //           channel("onRequest", frequest, (int64_t)this);
-    //   //           // // Override the response with an empty one to block the image.
-    //   //           // // If put_Response is not called, the request will continue as normal.
-    //   //           // wil::com_ptr<ICoreWebView2WebResourceResponse> response;
-    //   //           // CHECK_FAILURE(m_webViewEnvironment->CreateWebResourceResponse(
-    //   //           //     nullptr, 403 /*NoContent*/, L"Blocked", L"", &response));
-    //   //           // CHECK_FAILURE(args->put_Response(response.get()));
-    //   //           return E_INVALIDARG;
-    //   //         })
-    //   //         .Get(),
-    //   //     &token);
-
-    //   // std::cout << token.value << ":" << webviewWindow->Navigate(L"https://www.acfun.cn/bangumi/aa6001745") << std::endl;
-    //   //             return S_OK;
-    //   //           })
-    //   //           .Get());
-    //   //   return S_OK;
-    //   // })
-    //   // .Get());
-    //   std::cout << "res:" << res << std::endl;
-    // }
   };
 } // namespace webview

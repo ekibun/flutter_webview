@@ -3,17 +3,16 @@
  * @Author: ekibun
  * @Date: 2020-08-08 08:16:51
  * @LastEditors: ekibun
- * @LastEditTime: 2020-08-24 22:28:21
+ * @LastEditTime: 2020-08-25 23:43:16
  */
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
 
 import 'package:flutter_qjs/flutter_qjs.dart';
 import 'package:flutter_webview/flutter_webview.dart';
 
-import 'code/editor.dart';
+import 'highlight.dart';
 
 void main() {
   runApp(MyApp());
@@ -45,7 +44,7 @@ class TestPage extends StatefulWidget {
   State<StatefulWidget> createState() => _TestPageState();
 }
 
-Future<dynamic> webview(String url, Function callback) async {
+Future<dynamic> webview(String url, Map options) async {
   Completer c = new Completer();
   var webview = FlutterWebview();
   await webview.setMethodHandler((String method, dynamic args) async {
@@ -53,25 +52,38 @@ Future<dynamic> webview(String url, Function callback) async {
     if (method == "onNavigationCompleted") {
       await Future.delayed(Duration(seconds: 10));
       if (!c.isCompleted) c.completeError("Webview Call timeout 10 seconds after page completed.");
-    } else if ((await callback([method, args])) == true) {
+    }
+    var callback = options[method];
+    if (callback != null) if ((await callback([args])) == true) {
       print(args);
       if (!c.isCompleted) c.complete(args);
     }
     return;
   });
+  if (options["ua"] != null) await webview.setUserAgent(options["ua"]);
   await webview.navigate(url);
   Future.delayed(Duration(seconds: 100)).then((value) {
     if (!c.isCompleted) c.completeError("Webview Call timeout 100 seconds.");
   });
-  dynamic data = await c.future;
-  webview.destroy();
-  print(data);
-  return data;
+  try {
+    return await c.future;
+  } finally {
+    await webview.destroy();
+  }
 }
 
 class _TestPageState extends State<TestPage> {
-  String code, resp;
+  String resp;
   FlutterJs engine;
+
+  CodeInputController _controller =
+      CodeInputController(text: """dart("webview", "https://www.acfun.cn/bangumi/aa6001745", {
+  ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+  onRequest: ({url})=>{
+    if(url.includes("m3u8")) return true;
+    return false;
+  }
+})""");
 
   _createEngine() async {
     if (engine != null) return;
@@ -80,6 +92,8 @@ class _TestPageState extends State<TestPage> {
       switch (method) {
         case "webview":
           return await webview(arg[0], arg[1]);
+        case "print":
+          return print(arg);
         default:
           return JsMethodHandlerNotImplement();
       }
@@ -110,7 +124,7 @@ class _TestPageState extends State<TestPage> {
                           return;
                         }
                         try {
-                          resp = (await engine.evaluate(code ?? '', "<eval>")).toString();
+                          resp = (await engine.evaluate(_controller.text ?? '', "<eval>")).toString();
                         } catch (e) {
                           resp = e.toString();
                         }
@@ -130,10 +144,12 @@ class _TestPageState extends State<TestPage> {
               padding: const EdgeInsets.all(12),
               color: Colors.grey.withOpacity(0.1),
               constraints: BoxConstraints(minHeight: 200),
-              child: CodeEditor(
-                onChanged: (v) {
-                  code = v;
-                },
+              child: TextField(
+                keyboardType: TextInputType.multiline,
+                autofocus: true,
+                controller: _controller,
+                decoration: null,
+                // maxLines: null,
               ),
             ),
             SizedBox(height: 16),

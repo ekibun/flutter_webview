@@ -3,7 +3,7 @@
  * @Author: ekibun
  * @Date: 2020-08-20 23:25:54
  * @LastEditors: ekibun
- * @LastEditTime: 2020-08-24 14:26:56
+ * @LastEditTime: 2020-08-25 22:49:04
  */
 #include "include/flutter_webview/flutter_webview_plugin.h"
 
@@ -114,6 +114,15 @@ namespace
       webview::Offscreen *wv = (webview::Offscreen *)std::get<int64_t>(ValueOrNull(args, "webview"));
       std::string script = std::get<std::string>(ValueOrNull(args, "script"));
       if(!(wv && wv->evaluate(script, result.release()))){
+        result->Error(webview::TAG, "Error at evaluate");
+      }
+    }
+    else if (method_call.method_name().compare("setUserAgent") == 0)
+    {
+      flutter::EncodableMap args = *std::get_if<flutter::EncodableMap>(method_call.arguments());
+      webview::Offscreen *wv = (webview::Offscreen *)std::get<int64_t>(ValueOrNull(args, "webview"));
+      std::string ua = std::get<std::string>(ValueOrNull(args, "ua"));
+      if(!(wv && wv->callDevToolsProtocolMethod("Network.setUserAgentOverride", "{\"userAgent\":\"" + ua + "\"}", result.release()))){
         result->Error(webview::TAG, "Error at evaluate");
       }
     }
