@@ -3,7 +3,7 @@
  * @Author: ekibun
  * @Date: 2020-08-23 17:38:03
  * @LastEditors: ekibun
- * @LastEditTime: 2020-08-25 22:44:14
+ * @LastEditTime: 2020-08-26 23:52:59
  */
 #include <windows.h>
 #include <functional>
@@ -17,6 +17,7 @@ namespace webview
 {
 #undef interface
 #include "webview/WebView2.h"
+#include "webview/WebView2EnvironmentOptions.h"
 
   auto TAG = "FlutterWebviewException";
 
@@ -71,7 +72,9 @@ namespace webview
               flutter::MethodResult<flutter::EncodableValue> *result)
         : hwnd(hwnd), channel(channel), result(result)
     {
-      if (FAILED(CreateCoreWebView2Environment(this)))
+      auto options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
+      options->put_AdditionalBrowserArguments(L"--mute-audio"); // --headless
+      if (FAILED(CreateCoreWebView2EnvironmentWithOptions(nullptr, nullptr, options.Get(), this)))
       {
         result->Error(TAG, "Failed at CreateCoreWebView2Environment");
         delete this->result;
@@ -119,8 +122,10 @@ namespace webview
       {
         COREWEBVIEW2_WEB_ERROR_STATUS webErrorStatus;
         args->get_WebErrorStatus(&webErrorStatus);
-        invokeChannelMethod("onNavigationCompleted", (int64_t) webErrorStatus);
-      } else {
+        invokeChannelMethod("onNavigationCompleted", (int64_t)webErrorStatus);
+      }
+      else
+      {
         invokeChannelMethod("onNavigationCompleted", flutter::EncodableValue());
       }
       return S_OK;
@@ -220,11 +225,11 @@ namespace webview
     ~Offscreen()
     {
       std::cout << "close" << std::endl;
-      if (webviewController){
+      if (webviewController)
+      {
         webviewController->Close();
         webviewController = nullptr;
       }
-        
     }
   };
 } // namespace webview

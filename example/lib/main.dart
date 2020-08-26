@@ -3,7 +3,7 @@
  * @Author: ekibun
  * @Date: 2020-08-08 08:16:51
  * @LastEditors: ekibun
- * @LastEditTime: 2020-08-25 23:43:16
+ * @LastEditTime: 2020-08-26 21:18:45
  */
 import 'dart:async';
 
@@ -145,11 +145,10 @@ class _TestPageState extends State<TestPage> {
               color: Colors.grey.withOpacity(0.1),
               constraints: BoxConstraints(minHeight: 200),
               child: TextField(
-                keyboardType: TextInputType.multiline,
                 autofocus: true,
                 controller: _controller,
                 decoration: null,
-                // maxLines: null,
+                maxLines: null,
               ),
             ),
             SizedBox(height: 16),
