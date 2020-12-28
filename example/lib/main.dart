@@ -74,7 +74,7 @@ Future<dynamic> webview(String url, Map options) async {
 
 class _TestPageState extends State<TestPage> {
   String resp;
-  FlutterJs engine;
+  FlutterQjs engine;
 
   CodeInputController _controller =
       CodeInputController(text: """dart("webview", "https://www.acfun.cn/bangumi/aa6001745", {
@@ -87,7 +87,7 @@ class _TestPageState extends State<TestPage> {
 
   _createEngine() async {
     if (engine != null) return;
-    engine = FlutterJs();
+    engine = FlutterQjs();
     await engine.setMethodHandler((String method, List arg) async {
       switch (method) {
         case "webview":
@@ -95,7 +95,7 @@ class _TestPageState extends State<TestPage> {
         case "print":
           return print(arg);
         default:
-          return JsMethodHandlerNotImplement();
+          throw Exception("No such method");
       }
     });
   }
@@ -124,7 +124,7 @@ class _TestPageState extends State<TestPage> {
                           return;
                         }
                         try {
-                          resp = (await engine.evaluate(_controller.text ?? '', "<eval>")).toString();
+                          resp = (await engine.evaluate(_controller.text ?? '', name: "<eval>")).toString();
                         } catch (e) {
                           resp = e.toString();
                         }
@@ -134,7 +134,7 @@ class _TestPageState extends State<TestPage> {
                       child: Text("close engine"),
                       onPressed: () async {
                         if (engine == null) return;
-                        await engine.destroy();
+                        await engine.recreate();
                         engine = null;
                       }),
                 ],
