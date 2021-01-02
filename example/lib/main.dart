@@ -51,7 +51,9 @@ Future<dynamic> webview(String url, Map options) async {
     print("$method($args)");
     if (method == "onNavigationCompleted") {
       await Future.delayed(Duration(seconds: 10));
-      if (!c.isCompleted) c.completeError("Webview Call timeout 10 seconds after page completed.");
+      if (!c.isCompleted)
+        c.completeError(
+            "Webview Call timeout 10 seconds after page completed.");
     }
     var callback = options[method];
     if (callback != null) if ((await callback([args])) == true) {
@@ -76,8 +78,8 @@ class _TestPageState extends State<TestPage> {
   String resp;
   FlutterQjs engine;
 
-  CodeInputController _controller =
-      CodeInputController(text: """dart("webview", "https://www.acfun.cn/bangumi/aa6001745", {
+  CodeInputController _controller = CodeInputController(
+      text: """dart("webview", "https://www.acfun.cn/bangumi/aa6001745", {
   ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
   onRequest: ({url})=>{
     if(url.includes("m3u8")) return true;
@@ -87,11 +89,10 @@ class _TestPageState extends State<TestPage> {
 
   _createEngine() async {
     if (engine != null) return;
-    engine = FlutterQjs();
-    await engine.setMethodHandler((String method, List arg) async {
+    engine = FlutterQjs(methodHandler: (String method, List arg) async {
       switch (method) {
         case "webview":
-          return await webview(arg[0], arg[1]);
+          return webview(arg[0], arg[1]);
         case "print":
           return print(arg);
         default:
@@ -115,7 +116,8 @@ class _TestPageState extends State<TestPage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  FlatButton(child: Text("create engine"), onPressed: _createEngine),
+                  FlatButton(
+                      child: Text("create engine"), onPressed: _createEngine),
                   FlatButton(
                       child: Text("evaluate"),
                       onPressed: () async {
@@ -124,17 +126,19 @@ class _TestPageState extends State<TestPage> {
                           return;
                         }
                         try {
-                          resp = (await engine.evaluate(_controller.text ?? '', name: "<eval>")).toString();
+                          resp = (await engine.evaluate(_controller.text ?? '',
+                                  name: "<eval>"))
+                              .toString();
                         } catch (e) {
                           resp = e.toString();
                         }
                         setState(() {});
                       }),
                   FlatButton(
-                      child: Text("close engine"),
+                      child: Text("reset"),
                       onPressed: () async {
                         if (engine == null) return;
-                        await engine.recreate();
+                        await engine.close();
                         engine = null;
                       }),
                 ],
