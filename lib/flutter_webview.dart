@@ -44,13 +44,15 @@ class FlutterWebview {
   Future<void> setUserAgent(String ua) async {
     await _ensureEngine();
     var arguments = {"webview": _webview, "ua": ua};
-    return _FlutterWebview.instance._channel.invokeMethod("setUserAgent", arguments);
+    return _FlutterWebview.instance._channel
+        .invokeMethod("setUserAgent", arguments);
   }
 
   Future<bool> navigate(String url, {String script}) async {
     await _ensureEngine();
     var arguments = {"webview": _webview, "url": url, "script": script ?? ""};
-    return _FlutterWebview.instance._channel.invokeMethod("navigate", arguments);
+    return _FlutterWebview.instance._channel
+        .invokeMethod("navigate", arguments);
   }
 }
 
