@@ -89,7 +89,8 @@ class _TestPageState extends State<TestPage> {
 
   _createEngine() async {
     if (engine != null) return;
-    engine = FlutterQjs(methodHandler: (String method, List arg) async {
+    engine = FlutterQjs();
+    engine.setToGlobalObject("channel", (String method, List arg) async {
       switch (method) {
         case "webview":
           return webview(arg[0], arg[1]);
