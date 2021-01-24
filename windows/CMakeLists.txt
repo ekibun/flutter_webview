@@ -3,10 +3,12 @@ set(PROJECT_NAME "flutter_webview")
 project(${PROJECT_NAME} LANGUAGES CXX)
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
-set(PLUGIN_NAME "${PROJECT_NAME}_plugin")
+# This value is used when generating builds using this plugin, so it must
+# not be changed
+set(PLUGIN_NAME "flutter_webview_plugin")
 
 add_library(${PLUGIN_NAME} SHARED
-  "${PLUGIN_NAME}.cpp"
+  "flutter_webview_plugin.cpp"
 )
 apply_standard_settings(${PLUGIN_NAME})
 set_target_properties(${PLUGIN_NAME} PROPERTIES

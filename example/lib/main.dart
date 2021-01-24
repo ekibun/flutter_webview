@@ -8,8 +8,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
 import 'package:flutter_qjs/flutter_qjs.dart';
+import 'package:flutter_qjs/isolate.dart';
+
 import 'package:flutter_webview/flutter_webview.dart';
 
 import 'highlight.dart';
@@ -50,13 +51,13 @@ Future<dynamic> webview(String url, Map options) async {
   await webview.setMethodHandler((String method, dynamic args) async {
     print("$method($args)");
     if (method == "onNavigationCompleted") {
-      await Future.delayed(Duration(seconds: 10));
+      await Future.delayed(Duration(seconds: 30));
       if (!c.isCompleted)
         c.completeError(
             "Webview Call timeout 10 seconds after page completed.");
     }
     var callback = options[method];
-    if (callback != null) if ((await callback([args])) == true) {
+    if (callback != null) if ((await callback(args)) == true) {
       print(args);
       if (!c.isCompleted) c.complete(args);
     }
@@ -76,10 +77,10 @@ Future<dynamic> webview(String url, Map options) async {
 
 class _TestPageState extends State<TestPage> {
   String resp;
-  FlutterQjs engine;
+  IsolateQjs engine;
 
   CodeInputController _controller = CodeInputController(
-      text: """dart("webview", "https://www.acfun.cn/bangumi/aa6001745", {
+      text: """webview("https://www.acfun.cn/bangumi/aa6001745", {
   ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
   onRequest: ({url})=>{
     if(url.includes("m3u8")) return true;
@@ -89,17 +90,11 @@ class _TestPageState extends State<TestPage> {
 
   _createEngine() async {
     if (engine != null) return;
-    engine = FlutterQjs();
-    engine.setToGlobalObject("channel", (String method, List arg) async {
-      switch (method) {
-        case "webview":
-          return webview(arg[0], arg[1]);
-        case "print":
-          return print(arg);
-        default:
-          throw Exception("No such method");
-      }
-    });
+    engine = IsolateQjs();
+    // engine.dispatch();
+    final setToGlobalObject =
+        await engine.evaluate("(key, val) => this[key] = val;");
+    await setToGlobalObject("webview", await engine.bind(webview));
   }
 
   @override
@@ -118,13 +113,10 @@ class _TestPageState extends State<TestPage> {
               child: Row(
                 children: [
                   FlatButton(
-                      child: Text("create engine"), onPressed: _createEngine),
-                  FlatButton(
                       child: Text("evaluate"),
                       onPressed: () async {
                         if (engine == null) {
-                          print("please create engine first");
-                          return;
+                          await _createEngine();
                         }
                         try {
                           resp = (await engine.evaluate(_controller.text ?? '',

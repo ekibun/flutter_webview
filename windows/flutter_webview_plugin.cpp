@@ -37,18 +37,6 @@ namespace
   };
 
   std::shared_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel;
-  void invokeChannelMethod(std::string name, flutter::EncodableValue args, int64_t webview)
-  {
-    auto map = new flutter::EncodableMap();
-    (*map)[std::string("webview")] = webview;
-    (*map)[std::string("args")] = args;
-    
-    channel->InvokeMethod(
-        name,
-        std::make_unique<flutter::EncodableValue>(map),
-        nullptr);
-  }
-
   const flutter::EncodableValue &ValueOrNull(const flutter::EncodableMap &map, const char *key)
   {
     static flutter::EncodableValue null_value;
@@ -90,12 +78,6 @@ namespace
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
   {
-    // Replace "getPlatformVersion" check with your plugin's method.
-    // See:
-    // https://github.com/flutter/engine/tree/master/shell/platform/common/cpp/client_wrapper/include/flutter
-    // and
-    // https://github.com/flutter/engine/tree/master/shell/platform/glfw/client_wrapper/include/flutter
-    // for the relevant Flutter APIs.
     if (method_call.method_name().compare("create") == 0)
     {
       new webview::Offscreen(hWnd, channel, result.release());
