@@ -23,7 +23,6 @@ class FlutterWebview {
   _ensureEngine() async {
     if (_webview == null) {
       _webview = await _FlutterWebview.instance._channel.invokeMethod("create");
-      print(_webview);
     }
   }
 

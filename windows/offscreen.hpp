@@ -224,7 +224,6 @@ namespace webview
 
     ~Offscreen()
     {
-      std::cout << "close" << std::endl;
       if (webviewController)
       {
         webviewController->Close();
