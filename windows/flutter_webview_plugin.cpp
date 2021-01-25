@@ -74,6 +74,33 @@ namespace
 
   FlutterWebviewPlugin::~FlutterWebviewPlugin() {}
 
+  std::vector<std::string> split(std::string str, std::string pattern)
+  {
+	  std::string::size_type pos;
+	  std::vector<std::string> result;
+	  str += pattern;
+	  int size = str.size();
+	  for (int i = 0; i < size; i++)
+	  {
+		  pos = str.find(pattern, i);
+		  if (pos < size)
+		  {
+			  std::string s = str.substr(i, pos - i);
+			  result.push_back(s);
+			  i = pos + pattern.size() - 1;
+		  }
+	  }
+	  return result;
+  }
+
+  std::string getUrlDomain(std::string url) {
+	  int i = url.find("://", 0);
+	  int j = url.find("/", i + 3);
+	  if (i > 0 && j > i)
+		  return url.substr(i + 3, j - i - 3);
+	  return "";
+  }
+
   void FlutterWebviewPlugin::HandleMethodCall(
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
@@ -99,6 +126,41 @@ namespace
         result->Error(webview::TAG, "Error at evaluate");
       }
     }
+	else if (method_call.method_name().compare("setCookies") == 0) 
+	{
+		flutter::EncodableMap args = *std::get_if<flutter::EncodableMap>(method_call.arguments());
+		webview::Offscreen* wv = (webview::Offscreen*)std::get<int64_t>(ValueOrNull(args, "webview"));
+		std::string url = std::get<std::string>(ValueOrNull(args, "url"));
+		std::string cookies = std::get<std::string>(ValueOrNull(args, "cookies"));
+		if (wv && cookies.length() > 0 && url.length() > 0) {
+			std::vector<std::string> ster = split(cookies, ";");
+			std::vector<std::string>::iterator iter;
+			std::string json = "[";
+			std::string _domain = getUrlDomain(url);
+			for (iter = ster.begin(); iter != ster.end(); iter++) {
+				std::vector<std::string> ster2 = split(*iter, "=");
+				if (ster2.size() > 1) {
+					std::vector<std::string>::iterator iterB = ster2.begin();
+					std::string _s = *iterB; iterB++;
+					std::string _b = *iterB;
+					json = json + "{\"url\":\"" + url +
+						"\",\"name\":\"" + _s +
+						"\",\"value\":\"" + _b  +
+						"\",\"domain\":\"" + _domain +
+						"\",\"path\":\"/" + 
+						"\"},";					
+				}
+			}
+			if (json.length() > 1) {
+				json = json.substr(0, json.length() - 1) + "]";
+			}			
+			if (!(json.length() > 2 && wv->callDevToolsProtocolMethod("Network.setCookies", "{\"cookies\":" + json + "}", result.release()))) {
+				result->Error(webview::TAG, "Error at setCookies");
+				return;
+			}
+		} else
+			result->Error(webview::TAG, "Unset at setCookies");
+	}
     else if (method_call.method_name().compare("setUserAgent") == 0)
     {
       flutter::EncodableMap args = *std::get_if<flutter::EncodableMap>(method_call.arguments());
