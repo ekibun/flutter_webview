@@ -6,7 +6,6 @@
  * @LastEditTime: 2020-08-02 12:39:26
  */
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_highlight/themes/a11y-light.dart';
@@ -30,16 +29,16 @@ List<TextSpan> _convert(String code) {
       stack.add(currentSpans);
       currentSpans = tmp;
 
-      node.children.forEach((n) {
+      node.children?.forEach((n) {
         _traverse(n);
-        if (n == node.children.last) {
+        if (n == node.children?.last) {
           currentSpans = stack.isEmpty ? spans : stack.removeLast();
         }
       });
     }
   }
 
-  for (var node in nodes) {
+  for (var node in nodes ?? []) {
     _traverse(node);
   }
 
@@ -47,13 +46,15 @@ List<TextSpan> _convert(String code) {
 }
 
 class CodeInputController extends TextEditingController {
-  CodeInputController({String text}) : super(text: text);
+  CodeInputController({String? text}) : super(text: text);
 
   TextSpan oldSpan = TextSpan();
-  Future<void> spanCall;
+  Future<void>? spanCall;
+
+
 
   @override
-  TextSpan buildTextSpan({TextStyle style, bool withComposing}) {
+  TextSpan buildTextSpan({BuildContext? context, TextStyle? style, bool? withComposing}) {
     String oldText = oldSpan.toPlainText();
     String newText = value.text;
     if (oldText == newText) return oldSpan;
@@ -65,11 +66,11 @@ class CodeInputController extends TextEditingController {
             }))
         .catchError((_) => {});
 
-    List<TextSpan> beforeSpans = [];
+    List<InlineSpan> beforeSpans = [];
     int splitAt = value.selection.start;
     if (splitAt < 0) splitAt = newText.length ~/ 2;
     int start = 0;
-    InlineSpan leftSpan;
+    InlineSpan? leftSpan;
     oldSpan.children?.indexWhere((element) {
       String elementText = element.toPlainText();
       if (start + elementText.length > splitAt ||
@@ -81,10 +82,10 @@ class CodeInputController extends TextEditingController {
       start += elementText.length;
       return false;
     });
-    List<TextSpan> endSpans = [];
+    List<InlineSpan> endSpans = [];
     int end = 0;
-    InlineSpan rightSpan;
-    oldSpan.children?.sublist(beforeSpans.length)?.lastIndexWhere((element) {
+    InlineSpan? rightSpan;
+    oldSpan.children?.sublist(beforeSpans.length).lastIndexWhere((element) {
       String elementText = element.toPlainText();
       if (splitAt + end + elementText.length >= newText.length ||
           !newText
@@ -101,8 +102,8 @@ class CodeInputController extends TextEditingController {
     return TextSpan(style: style, children: [
       ...beforeSpans,
       TextSpan(
-          style: leftSpan != null && leftSpan == rightSpan
-              ? leftSpan.style
+          style: leftSpan is TextSpan && leftSpan == rightSpan
+              ? (leftSpan as TextSpan).style
               : style,
           text: newText.substring(start, max(start, newText.length - end))),
       ...endSpans.reversed

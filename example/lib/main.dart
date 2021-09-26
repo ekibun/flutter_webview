@@ -8,8 +8,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_qjs/flutter_qjs.dart';
-import 'package:flutter_qjs/isolate.dart';
 
 import 'package:flutter_webview/flutter_webview.dart';
 
@@ -20,7 +20,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key key}) : super(key: key);
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
       title: 'flutter_qjs',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        appBarTheme: AppBarTheme(brightness: Brightness.dark, elevation: 0),
+        appBarTheme: AppBarTheme(elevation: 0, systemOverlayStyle: SystemUiOverlayStyle.light),
         backgroundColor: Colors.grey[300],
         primaryColorBrightness: Brightness.dark,
       ),
@@ -48,17 +48,16 @@ class TestPage extends StatefulWidget {
 Future<dynamic> webview(String url, Map options) async {
   Completer c = new Completer();
   var webview = FlutterWebview();
+  JSRef.dupRecursive(options);
   await webview.setMethodHandler((String method, dynamic args) async {
-    print("$method($args)");
     if (method == "onNavigationCompleted") {
       await Future.delayed(Duration(seconds: 30));
       if (!c.isCompleted)
         c.completeError(
             "Webview Call timeout 10 seconds after page completed.");
     }
-    var callback = options[method];
-    if (callback != null) if ((await callback(args)) == true) {
-      print(args);
+    JSInvokable? callback = options[method];
+    if (callback != null) if ((await callback.invoke([args])) == true) {
       if (!c.isCompleted) c.complete(args);
     }
     return;
@@ -72,12 +71,13 @@ Future<dynamic> webview(String url, Map options) async {
     return await c.future;
   } finally {
     await webview.destroy();
+    JSRef.freeRecursive(options);
   }
 }
 
 class _TestPageState extends State<TestPage> {
-  String resp;
-  IsolateQjs engine;
+  String? resp;
+  IsolateQjs? engine;
 
   CodeInputController _controller = CodeInputController(
       text: """webview("https://www.acfun.cn/bangumi/aa6001745", {
@@ -91,10 +91,10 @@ class _TestPageState extends State<TestPage> {
   _createEngine() async {
     if (engine != null) return;
     engine = IsolateQjs();
-    // engine.dispatch();
-    final setToGlobalObject =
-        await engine.evaluate("(key, val) => this[key] = val;");
-    await setToGlobalObject("webview", await engine.bind(webview));
+    JSInvokable setToGlobalObject =
+        await engine!.evaluate("(key, val) => { this[key] = val; }");
+    await setToGlobalObject.invoke(["webview", IsolateFunction(webview)]);
+    setToGlobalObject.free();
   }
 
   @override
@@ -112,14 +112,14 @@ class _TestPageState extends State<TestPage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  FlatButton(
+                  TextButton(
                       child: Text("evaluate"),
                       onPressed: () async {
                         if (engine == null) {
                           await _createEngine();
                         }
                         try {
-                          resp = (await engine.evaluate(_controller.text ?? '',
+                          resp = (await engine!.evaluate(_controller.text,
                                   name: "<eval>"))
                               .toString();
                         } catch (e) {
@@ -127,11 +127,11 @@ class _TestPageState extends State<TestPage> {
                         }
                         setState(() {});
                       }),
-                  FlatButton(
+                  TextButton(
                       child: Text("reset"),
                       onPressed: () async {
                         if (engine == null) return;
-                        await engine.close();
+                        await engine!.close();
                         engine = null;
                       }),
                 ],

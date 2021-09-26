@@ -47,10 +47,10 @@ class FlutterWebview {
         .invokeMethod("setUserAgent", arguments);
   }
 
-  Future<bool> navigate(String url, {String script}) async {
+  Future<bool> navigate(String url, {String? script}) async {
     await _ensureEngine();
     var arguments = {"webview": _webview, "url": url, "script": script ?? ""};
-    return _FlutterWebview.instance._channel
+    return await _FlutterWebview.instance._channel
         .invokeMethod("navigate", arguments);
   }
 }
@@ -58,7 +58,7 @@ class FlutterWebview {
 class _FlutterWebview {
   factory _FlutterWebview() => _getInstance();
   static _FlutterWebview get instance => _getInstance();
-  static _FlutterWebview _instance;
+  static _FlutterWebview? _instance;
   MethodChannel _channel = const MethodChannel('soko.ekibun.flutter_webview');
   Map<dynamic, MethodHandler> methodHandlers = Map<dynamic, MethodHandler>();
   _FlutterWebview._internal() {
@@ -66,9 +66,10 @@ class _FlutterWebview {
       try {
         var engine = call.arguments["webview"];
         var args = call.arguments["args"];
-        if (methodHandlers[engine] == null) return call.noSuchMethod(null);
-        var ret = await methodHandlers[engine](call.method, args);
-        if (ret is MethodHandlerNotImplement) return call.noSuchMethod(null);
+        if (methodHandlers[engine] == null) return Exception("No Such Method");
+        var ret = await methodHandlers[engine]!(call.method, args);
+        if (ret is MethodHandlerNotImplement)
+          return Exception("No Such Method");
         return ret;
       } catch (e) {
         print(e);
@@ -80,6 +81,6 @@ class _FlutterWebview {
     if (_instance == null) {
       _instance = new _FlutterWebview._internal();
     }
-    return _instance;
+    return _instance!;
   }
 }
