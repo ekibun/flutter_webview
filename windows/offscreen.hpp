@@ -149,7 +149,7 @@ namespace webview
       ICoreWebView2HttpRequestHeaders *headers;
       request->get_Headers(&headers);
       ICoreWebView2HttpHeadersCollectionIterator *iterator;
-      flutter::EncodableList fheaders;
+      flutter::EncodableMap fheaders;
       if (SUCCEEDED(headers->GetIterator(&iterator)))
       {
         BOOL hasCurrent = FALSE;
@@ -158,11 +158,20 @@ namespace webview
           LPWSTR name, value;
           if (FAILED(iterator->GetCurrentHeader(&name, &value)))
             break;
-          std::map<flutter::EncodableValue, flutter::EncodableValue> kv;
-          kv[from_lpwstr(name)] = from_lpwstr(value);
+          auto strName = from_lpwstr(name);
+          auto plist = std::get_if<flutter::EncodableList>(&fheaders[strName]);
+          if (plist == nullptr)
+          {
+            flutter::EncodableList newList;
+            newList.emplace_back(from_lpwstr(value));
+            fheaders[strName] = newList;
+          }
+          else
+          {
+            plist->emplace_back(from_lpwstr(value));
+          }
           CoTaskMemFree(name);
           CoTaskMemFree(value);
-          fheaders.emplace_back(kv);
           BOOL hasNext = FALSE;
           if (FAILED(iterator->MoveNext(&hasNext)) || !hasNext)
             break;
@@ -191,7 +200,8 @@ namespace webview
         return SUCCEEDED(webviewWindow->ExecuteScript(
             to_lpwstr(script),
             Microsoft::WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
-                [jsResult](HRESULT errorCode, LPCWSTR resultObjectAsJson) -> HRESULT {
+                [jsResult](HRESULT errorCode, LPCWSTR resultObjectAsJson) -> HRESULT
+                {
                   if (resultObjectAsJson)
                     jsResult->Success(from_lpwstr((wchar_t *)resultObjectAsJson));
                   else
@@ -210,7 +220,8 @@ namespace webview
         return SUCCEEDED(webviewWindow->CallDevToolsProtocolMethod(
             to_lpwstr(methodName), to_lpwstr(parametersAsJson),
             Microsoft::WRL::Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
-                [callResult](HRESULT errorCode, LPCWSTR resultObjectAsJson) -> HRESULT {
+                [callResult](HRESULT errorCode, LPCWSTR resultObjectAsJson) -> HRESULT
+                {
                   if (resultObjectAsJson)
                     callResult->Success(from_lpwstr((wchar_t *)resultObjectAsJson));
                   else
